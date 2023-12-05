@@ -62,8 +62,17 @@ lapply(packages, install_if_missing)
 # Save the modified data frame
 #save(survey, file = "modified_survey.RData")
 
-# Load the saved data frame
-load("modified_survey.RData")
+# Define the URL of the file
+url <- "https://github.com/carecodeconnect/capstone_survey/blob/main/modified_survey.RData?raw=true"
+
+# Define the destination file path
+destfile <- "modified_survey.RData"
+
+# Use download.file() to download the file
+download.file(url, destfile, mode = "wb")
+
+# Load the data into R
+load(destfile)
 
 # Define the preprocessing function
 preprocess_text <- function(text) {
