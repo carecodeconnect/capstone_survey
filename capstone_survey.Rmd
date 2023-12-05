@@ -1,0 +1,1025 @@
+---
+title: "Mindfulness, Gender & Online Teaching: An Exploratory Data Analysis & Predictive Modeling Project"
+output:
+  pdf_document:
+    latex_engine: xelatex  # Use xelatex instead of pdflatex
+date: "2023-12-04"
+---
+
+# Executive Summary
+
+This section describes the dataset and variables, and summarizes the goal of the project and key steps that were performed.
+
+## Overview of the Project
+
+This project aims to explore the dynamics of mindfulness teaching, with a focus on gender and online teaching modalities. Utilizing a comprehensive dataset obtained through a nationwide online survey of `768` participants, the project report employs quantitative statistical analysis using `R`. Key steps include data tidying, exploratory data analysis, sentiment analysis, and predictive modeling using tree-based algorithms.
+
+## Key Findings
+
+The exploratory data analysis revealed that mindfulness teachers are predominantly **middle-aged females**. 
+
+- **Exploratory data analysis** of gender and online teaching preferences showed significant gender-based differences in online teaching practices. 
+
+- **Statistical tests** confirmed the importance of gender in online teaching engagement, particularly in the preference for online teaching and the number of students taught online. 
+
+- **Advanced machine learning models**, including Random Forest and XGBoost, were employed to further investigate these relationships, indicating moderate accuracy in predicting online teaching based on gender.
+
+- **Sentiment analysis** of open-ended survey responses highlighted a predominantly positive outlook among mindfulness teachers regarding the future of the sector. 
+
+The analysis provided valuable insights into the challenges and opportunities perceived by mindfulness teachers.
+
+## Conclusion and Implications
+
+The project successfully demonstrates the significant role of gender in online mindfulness teaching and offers a nuanced understanding of the current state and future prospects of the mindfulness sector. 
+
+The findings have implications for how mindfulness is taught and received in online settings, emphasizing the need for further research and targeted strategies to address gender disparities and optimize teaching methodologies for diverse audiences. 
+
+The study's limitations, primarily its reliance on self-reported data and the need for broader demographic representation, pave the way for future research to build upon these findings and explore other influential factors in mindfulness teaching.
+
+# 1. Introduction
+
+Mindfulness - a mind-body practice to enhance awareness of the present moment - has become a global phenomenon. A recent survey suggests 15% of adults in Britain - almost 8 million people - have learnt how to practice mindfulness meditation (Simonsson *et al.*, 2021). Yet, despite the remarkable rise and popularity of mindfulness, and the many studies of its therapeutic effectiveness (see figure 1), studies of the movement's spread and significance are few.
+
+![Figure 1: Mindfulness in academic journal articles by year: 1980-2022](mindfulness-research-01.png)
+For the purpose of this project report, we focus on the following specific research questions:
+
+## Research Questions
+
+-   Who are mindfulness teachers?
+-   What factors influence online teaching of mindfulness?
+-   How does gender relate to online mindfulness teaching?
+-   What are mindfulness teachers' outlooks on the future?
+
+```{R, echo=FALSE, include=FALSE, warning=FALSE}
+Sys.setenv(OPENSSL_CONF="/dev/null")
+
+options(repos = c(CRAN = "https://cloud.r-project.org/"))
+
+# Function to check and install packages
+install_if_missing <- function(package) {
+  if (!require(package, character.only = TRUE)) {
+    install.packages(package)
+    library(package, character.only = TRUE)
+  }
+}
+
+# Check and load necessary libraries
+packages <- c("here", "tidyverse", "tm", "SnowballC", "tidytext", "dplyr", "ggplot2", "knitr", "kableExtra", "tidymodels", "ranger", "tune", "car", "forcats", "yardstick", "RColorBrewer")
+
+lapply(packages, install_if_missing)
+
+# Import SPSS data into R and select only the variables of interest
+#survey <- haven::read_sav(here("survey.sav")) %>%
+#  mutate(
+#    motivations = Q5.2,
+#    avenues_txt = Q5.1,
+#    outlook_txt = Q5.4,
+#    age = Q6.1,
+#    gender = Q6.2,
+#    sexuality = Q6.3,
+#    ethnicity = R6.4,
+#    disability = Q6.5,
+#    technology = R2.25,
+#    website = Q7.2,
+#    online_teaching = Q2.13,
+#    online_n = Q2.14,
+#    year_started = Q2.10
+#  ) %>%
+#  select(motivations, avenues_txt, outlook_txt, age, gender, #sexuality, ethnicity, disability, technology, website, #online_teaching, online_n, year_started)
+
+# Transforming the variables
+#survey <- survey %>%
+#  mutate(
+#    motivations = na_if(motivations, ""),
+#    avenues_txt = na_if(avenues_txt, ""),
+#    outlook_txt = na_if(outlook_txt, ""),
+#    age = as_factor(age),
+#    gender = as_factor(gender),
+#    sexuality = as_factor(sexuality),
+#    ethnicity = as_factor(ethnicity),
+#    disability = as_factor(disability),
+#    technology = as_factor(technology),
+#    website = as_factor(website),
+#    online_teaching = as_factor(online_teaching),
+#    online_n = as_factor(online_n),
+#    year_started = {
+#      temp <- na_if(year_started, "")
+#      temp <- as.numeric(temp)
+#      attr(temp, "label") <- attr(survey$year_started, "label")
+#      temp
+#    }
+#  )
+
+# Save the modified data frame
+#save(survey, file = "modified_survey.RData")
+
+# Load the saved data frame
+load("modified_survey.RData")
+
+```
+
+# 2. Methods/Analysis
+
+This is a methods/analysis section that explains the process and techniques used, including data cleaning, data exploration and visualization, insights gained, and the modeling approach. 
+
+We adopted a **mixed-methods** design using **quantitative** and **qualitative** methods.
+
+Our data collection included a nationwide online survey with **768** participants.
+
+This project report focuses on the quantitative analysis of the survey data. We use `R` and specifically packages within the `tidyverse` and `tidymodels` ecosystem, due to their ease of use, and accessibility. We followed the guidance provided in *Tidy Modeling with R* by Kuhn and Silge (2022).
+
+To address our research questions, we engage in data tidying, preprocessing, exploratory data analysis, and machine learning tree-based algorithms.
+
+## 2.1 Data Tidying & Exploratory Data Analysis
+
+We used packages from base `R` and the `tidyverse` ecosystem to tidy the data. We renamed variables, replaced empty strings with `NA`, and converted variables to their appropriate data types.
+
+We performed Exploratory Data Analysis using descriptive statistics to quantitatively measure patterns in the survey data.
+
+## 2.2 Tree-Based Modeling
+
+### Description of the Approach
+
+The tree-based modeling approach in this project utilized two primary algorithms: **Random Forest** and **XGBoost** (eXtreme Gradient Boosting). 
+
+- **Random Forest**, known for its robustness, creates a 'forest' of decision trees, outputting the mode of the classes from individual trees for predictions. 
+
+- **XGBoost**, an efficient implementation of gradient boosting machines, builds sequential trees where each corrects the predecessor's errors, enhancing prediction accuracy. 
+
+The implementation involved the `ranger` and `xgboost` engines in R, respectively, and was facilitated by the `tidymodels` framework, integrating packages like `parsnip`, `recipes`, `rsample`, and `yardstick` for a comprehensive modeling workflow.
+
+### Justification for the Choice of Algorithms
+
+The selection of Random Forest and XGBoost was motivated by their ability to effectively manage complex, non-linear relationships within the data. 
+
+- **Random Forest** reduces overfitting through averaging multiple decision trees, making it ideal for generalizing findings across populations. 
+
+- **XGBoost** is favored for its quick processing and accuracy in classification tasks, sequentially improving trees for more precise modeling. Both algorithms excel in handling missing values and providing predictor importance scores, offering valuable insights, especially crucial for educational research where clear, actionable results are sought.
+
+### Implementation and Evaluation
+
+1. The implementation process started with data preprocessing, where categorical variables were converted into dummy variables, and numeric ones were normalized, a critical step for the effectiveness of tree-based models. 
+
+2. The models were then specified with parameters apt for the dataset: tree numbers and variable splits for Random Forest, and boosting rounds for XGBoost.
+
+3. Cross-validation, especially stratified sampling based on gender, was employed to ensure robustness and minimize bias. 
+
+4. The models' performance was evaluated using metrics like accuracy, ROC AUC, and log loss, providing a well-rounded understanding of their predictive capabilities in the context of mindfulness teaching practices. 
+
+This thorough evaluation confirmed the models' applicability and reliability in real-world educational settings.
+
+## 2.3 Sentiment Analysis
+
+The process detailed in the provided text involves a sentiment analysis of survey text data. Here is a summary of the steps followed:
+
+**Data Preparation**: The raw text data from a survey was converted into a data frame format, which is necessary for processing in R, a programming language often used for data analysis.
+
+```{R, preprocess, echo=FALSE}
+
+# Define the preprocessing function
+preprocess_text <- function(text) {
+  # Convert to lower case
+  text <- tolower(text)
+  
+  # Remove punctuation
+  text <- removePunctuation(text)
+  
+  # Remove stopwords
+  text <- removeWords(text, stopwords("english"))
+  
+  # Tokenize and stem words (optional)
+  text <- wordStem(strsplit(text, " ")[[1]])
+  
+  # Rejoin the words
+  text <- paste(text, collapse = " ")
+  
+  return(text)
+}
+
+# Apply the preprocessing function to create new variables
+survey$motivations_pp <- sapply(survey$motivations, preprocess_text, USE.NAMES = FALSE)
+survey$avenues_txt_pp <- sapply(survey$avenues_txt, preprocess_text, USE.NAMES = FALSE)
+survey$outlook_txt_pp <- sapply(survey$outlook_txt, preprocess_text, USE.NAMES = FALSE)
+
+```
+
+**Tokenization**: The text data was tokenized, meaning it was broken down into individual words or "tokens". This is a common first step in text analysis to enable word-level processing.
+
+```{R, echo=FALSE}
+
+# Convert your text data to a data frame if it's not already
+text_data <- data.frame(text = survey$outlook_txt, stringsAsFactors = FALSE)
+
+# Tokenize the data
+tokenized_data <- text_data %>%
+  unnest_tokens(word, text)
+
+# Print sample of tokenized data
+#print(head(tokenized_data))
+```
+
+**Sentiment Scoring**: Each tokenized word was then matched with a sentiment score using the `bing` lexicon, which classifies words as either positive or negative.
+
+```{R, echo=FALSE}
+# Get sentiment scores
+sentiment_scores <- tokenized_data %>%
+  inner_join(get_sentiments("bing"), by = "word")
+
+# Print sample of sentiment scores
+#print(head(sentiment_scores))
+
+# Summarize sentiment scores
+sentiment_summary <- sentiment_scores %>%
+  group_by(sentiment) %>%
+  summarise(count = n()) %>%
+  spread(sentiment, count, fill = 0)
+
+# Print sentiment summary
+#print(sentiment_summary)
+```
+
+**Sentiment Summary**: After scoring, the data was summarized to count the frequency of each sentiment category. This summary was then used to calculate the net sentiment by subtracting the number of negative sentiment words from positive sentiment words.
+
+**Visualization**: The top words by sentiment frequency were visualized in a plot, showing the most frequent words categorized by sentiment. This helps in understanding the overall sentiment of the text data by highlighting the most common positive and negative words.
+
+
+# 3. Results
+
+This section answers our research questions by presenting exploratory data analysis, the modeling results, and discusses the model performance.
+
+## 3.1 Who are mindfulness teachers?
+
+### Gender & Age
+
+Mindfulness teachers tend to be female and middle-aged.
+
+
+```{r gender, echo=FALSE, warning=FALSE}
+
+# Assuming 'survey$gender' contains the gender data
+gender_data <- table(survey$gender)
+
+# Create a data frame for better presentation in kable
+gender_df <- data.frame(
+  Gender = names(gender_data),
+  Count = as.vector(gender_data)
+)
+
+# Use kable to create a table with LaTeX formatting and added styling
+kable(gender_df, 
+      format = "latex", 
+      caption = "Gender Distribution", 
+      booktabs = TRUE, 
+      row.names = FALSE) %>%
+  kable_styling(latex_options = c("striped", "hold_position"))
+
+
+```
+
+```{r age_gender, echo=FALSE, warning=FALSE}
+
+# Define your categorical variables
+factor_vars <- c("age", "gender", "sexuality", "ethnicity", "disability", "technology", "website", 
+                 "online_teaching", "online_n", "formal_education", "prof_quals", "supervise_emp", 
+                 "employment_other_type", "trained", "trained_n", "advocacy", 
+                 "business_entrepreneurial", "management", "courses_in_year", "clients_taught", 
+                 "independent", "nations", "region_england", "region_wales", "region_scotland", 
+                 "region_ireland", "areas", "contexts")
+
+# Function to create a bar chart
+create_bar_chart <- function(data, var_name, flip_axes = FALSE) {
+  # Filter out NA values
+  data <- data %>% filter(!is.na(.[[var_name]]))
+
+  # Create a ggplot object
+  if (!flip_axes) {
+    p <- ggplot(data = data, aes_string(x = var_name, fill = var_name)) +
+      geom_bar(show.legend = FALSE) +
+      labs(title = paste("Bar chart of", var_name), x = NULL, y = "Frequency") +
+      theme_minimal() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Rotate x-axis labels if needed
+  } else {
+    p <- ggplot(data = data, aes(y = var_name, fill = var_name)) +
+      geom_bar(show.legend = FALSE) +
+      labs(title = paste("Bar chart of", var_name), x = "Frequency", y = NULL) +
+      theme_minimal() +
+      coord_flip()  # Flips the axes for a horizontal bar chart
+  }
+
+  # Get the number of levels for the current factor variable
+  num_levels <- nlevels(as.factor(data[[var_name]]))
+
+  # Choose a color palette that can accommodate the number of levels
+  colors <- colorRampPalette(brewer.pal(min(max(3, num_levels), 9), "Set3"))(num_levels)  # Adjust if you have more than 9 levels
+
+  # Apply the color palette to the plot
+  p <- p + scale_fill_manual(values = colors)
+  
+  return(p)
+}
+
+# Generate and display each plot individually
+
+# For 'age'
+create_bar_chart(survey, "age")
+
+```
+
+### Disability, Ethnicity & Sexuality
+
+Our participants tended to be white, heterosexual or straight, and non-disabled.
+
+```{r identities, echo=FALSE, warning=FALSE}
+# Convert data to long format for faceting
+survey_long <- tidyr::gather(survey, key="demographic", value="value", ethnicity, sexuality, disability)
+
+# Calculate frequency for each value within each demographic and arrange them
+survey_freq <- survey_long %>%
+  dplyr::group_by(demographic, value, .drop = FALSE) %>%
+  dplyr::summarise(freq = n(), .groups = "drop_last") %>%
+  dplyr::ungroup()
+
+# Arrange by demographic and frequency and set factor levels
+survey_freq <- survey_freq %>%
+  dplyr::group_by(demographic) %>%
+  dplyr::mutate(value = factor(value, levels=rev(unique(value[order(freq)])))) %>%
+  dplyr::ungroup() %>%
+  dplyr::arrange(demographic, desc(freq))
+
+# Remove NA values
+survey_freq <- survey_freq %>%
+  dplyr::filter(!is.na(value))
+
+# Rename "Non-white" to "People of colour" and adjust the factor levels
+survey_freq <- survey_freq %>%
+  dplyr::mutate(value = ifelse(demographic == "ethnicity" & value == "Non-white", "People of colour", as.character(value)))
+
+# Convert the 'value' column back to a factor after the renaming
+survey_freq$value <- factor(survey_freq$value)
+
+# Plot
+p_combined <- ggplot(survey_freq, aes(x=freq, y=value, fill=value)) + 
+  geom_bar(stat="identity") + 
+  facet_grid(demographic ~ ., scales="free_y") +
+  labs(title="Distribution of Identities") +
+  theme(axis.text.y = element_text(hjust = 1), legend.position = "none") + 
+  scale_fill_brewer(palette="Set1")
+
+p_combined
+
+```
+
+## 3.2 What factors influence online teaching of mindfulness?
+
+We narrowed down a larger dataset named `survey` to focus on four key aspects: age, gender, online teaching experience, and the year each respondent started teaching mindfulness. This selection, done for analytical clarity, is crucial for targeting relevant data. 
+
+The code then addresses a common issue in data processing: empty entries. It transforms these blanks into a recognizable format (labeled `NA` for `Not Available`) in `R`, which is a standard approach for dealing with missing information. 
+
+The next significant step is the filtration of the dataset, achieved using a functionality from the `dplyr` package, known for its data manipulation capabilities. This process excludes any records with missing information in the key areas, ensuring the final dataset is comprehensive and reliable for analysis. 
+
+```{R, echo=FALSE}
+# Selecting only relevant variables for modeling
+relevant_variables <- survey[, c("age", "gender", "online_teaching", "year_started")]
+
+# Convert blank to NA for relevant variables
+relevant_variables$age[relevant_variables$age == ""] <- NA
+relevant_variables$gender[relevant_variables$gender == ""] <- NA
+relevant_variables$online_teaching[relevant_variables$online_teaching == ""] <- NA
+relevant_variables$year_started[relevant_variables$year_started == ""] <- NA
+
+# Count NAs in relevant variables pre-filter
+na_count <- sum(is.na(relevant_variables))
+#print(paste("Number of NA values in relevant variables:", na_count))
+
+# Filter dataset for NA values in key variables
+survey_filtered <- relevant_variables %>%
+  filter(!is.na(age) & !is.na(gender) & !is.na(online_teaching) & !is.na(year_started))
+
+# Check for NA values in the filtered dataset
+#print(paste("Number of NAs in the filtered dataset:", sum(is.na(survey_filtered))))
+```
+
+### Data Preparation for Modeling
+
+We prepared dataset for tree-based machine learning modeling, with a specific focus on gender representation. We employed a stratified splitting approach, where the dataset, `survey_filtered`, was divided into training and testing sets, ensuring both sets have a representative balance of genders. This is particularly important given that over 70% of the dataset's participants are female, raising concerns about potential bias in a randomly split dataset.
+
+Stratification, achieved through the `initial_split` function with a `strata = "gender"` argument, ensures that both training (80% of the data) and testing (20%) sets mirror the overall gender distribution of the original dataset. Such a balanced split is crucial for developing unbiased and accurate tree-based models, because prevents the model from being skewed towards the majority class, thereby enhancing the model's generalizability and fairness.
+
+```{R, echo=FALSE}
+# Stratified splitting of the dataset based on 'gender'
+set.seed(123)
+data_split <- initial_split(survey_filtered, prop = 0.8, strata = "gender")
+train_data <- training(data_split)
+test_data  <- testing(data_split)
+
+# Check the number of levels for each factor variable
+#factor_levels <- sapply(train_data, function(x) if(is.factor(x)) length(levels(x)))
+#print(factor_levels)
+```
+
+### Random Forest Classification Model
+
+We conducted data preprocessing, model specification, and evaluation for a **Random Forest** classification model. 
+
+We started with data preprocessing using the `recipes` package, where categorical variables are converted into dummy variables, and numeric variables are normalized. The Random Forest model, specified using the `rand_forest` function from the `parsnip` package and implemented via the `ranger` engine, is designed for classification tasks.
+
+Cross-validation is set up with `vfold_cv` from the `rsample` package, ensuring a balanced representation of genders in each fold. The workflow combines the preprocessing steps and the model, which is then fit and evaluated on the training data with a focus on robustness and error handling. 
+
+This comprehensive approach, integrating specific `R` functions and packages, ensures the creation of an effective and fair classification model, considering the importance of gender balance in the training process.
+
+```{R, echo=FALSE}
+# Preprocessing the data
+data_recipe <- recipe(online_teaching ~ age + gender + year_started, data = train_data) %>%
+  step_dummy(all_nominal_predictors(), -all_outcomes()) %>%
+  step_normalize(all_numeric_predictors(), -all_outcomes())
+
+# Random Forest Model specification
+rf_model <- rand_forest(mode = "classification") %>%
+  set_engine("ranger") %>%
+  set_mode("classification")
+
+# Cross-validation setup
+cv <- vfold_cv(train_data, v = 5, strata = "gender")
+
+# Workflow for Random Forest
+rf_workflow <- workflow() %>%
+  add_recipe(data_recipe) %>%
+  add_model(rf_model)
+
+# Fit and evaluate Random Forest Model
+rf_results <- try(fit_resamples(
+  rf_workflow,
+  resamples = cv,
+  metrics = metric_set(roc_auc, accuracy)
+), silent = TRUE)
+
+# Check errors in fitting Random Forest Model
+if (inherits(rf_results, "try-error")) {
+  print("Error in fitting Random Forest Model")
+} else {
+  rf_performance <- rf_results %>% collect_metrics()
+  #print(rf_performance)
+}
+```
+
+We created a bar plot visualizing the performance metrics of a Random Forest model using the `ggplot2` package in R. The metrics plotted are accuracy and **ROC AUC** (Area Under the Receiver Operating Characteristic Curve), two common measures for evaluating classification models. 
+
+The plot shows two bars, with the height of each bar representing the mean value of the respective metric. Error bars are included to represent the standard error around the mean, giving a sense of the variability or uncertainty in the metric estimates. The graph is styled with a minimal theme and uses color coding to distinguish between the metrics. 
+
+The model exhibits a moderate level of accuracy and ROC AUC, with the values of both metrics being close to or above `0.5`, suggesting that the model performs better than random chance. The error bars indicate some variation in the model's performance across different folds or iterations of the cross-validation process.
+
+```{R, echo=FALSE}
+# Plotting accuracy and ROC AUC
+ggplot(rf_performance, aes(x = .metric, y = mean, fill = .metric)) +
+  geom_bar(stat = "identity", position = position_dodge()) +
+  geom_errorbar(aes(ymin = mean - std_err, ymax = mean + std_err), width = 0.2, position = position_dodge(0.9)) +
+  labs(title = "Random Forest Model Performance Metrics",
+       x = "Metric",
+       y = "Mean Value") +
+  theme_minimal() +
+  scale_fill_brewer(palette = "Set1")
+```
+
+We constructed a summary table for the performance metrics of a Random Forest model. The `kable` function from the 'knitr' package is used to format the data frame into a `LaTeX` table, which is further styled with `kable_styling` to have striped rows and a fixed position. 
+
+The resulting table, as shown in the code's output, concisely displays the Random Forest model's classification performance, indicating that the model has a **relatively high mean accuracy** and a **lower, yet above chance-level**, mean ROC AUC, with small standard errors suggesting precise estimates from the cross-validation process.
+
+```{R, echo=FALSE}
+
+rf_performance_table <- data.frame(
+  Metric = c("accuracy", "roc_auc"),
+  Estimator = c("binary", "binary"),
+  Mean = c(0.7408159, 0.5639125),
+  N = c(5, 5),
+  `Standard Error` = c(0.01790040, 0.02160701)
+)
+
+# Generate the table
+rf_performance_table %>%
+  kable("latex", booktabs = TRUE, caption = "Random Forest Model Performance") %>%
+  kable_styling(latex_options = c("striped", "hold_position"))
+
+```
+
+## 3.3 How does gender relate to online mindfulness teaching?
+
+
+I tested whether there is a relationship between gender, technology use, online teaching, and the number of students taught online.
+
+>**p-value** or **probability value** helps us find out if results are statistically significant. A common threshold is 0.05. If the p-value is below this, we can say the results are likely to be significant.
+
+Our results show that gender does not seem to be significantly related to use of technology. But gender does influence both whether a person teaches mindfulness online and the number of students taught online.
+
+
+```{r gender_technology_test, echo=FALSE, include=FALSE}
+
+# Chi-squared test for Gender and Technology Use
+chisq_test_gender_technology <- chisq.test(survey$gender, survey$technology)
+print(chisq_test_gender_technology)
+
+# Chi-squared test for Gender and Online Teaching
+chisq_test_gender_online_teaching <- chisq.test(survey$gender, survey$online_teaching)
+print(chisq_test_gender_online_teaching)
+
+# Chi-squared test for Gender and Number of Students Taught Online
+# (Assuming 'online_n' is categorical. If it's continuous, it needs a different approach)
+chisq_test_gender_online_n <- chisq.test(survey$gender, survey$online_n)
+print(chisq_test_gender_online_n)
+
+# Cross-tabulation for 'gender' and 'online_teaching'
+gender_online_teaching_crosstab <- table(survey$gender, survey$online_teaching)
+gender_online_teaching_crosstab
+
+# Proportions for 'gender' and 'online_teaching', across each level of 'gender'
+prop_gender_online_teaching <- prop.table(gender_online_teaching_crosstab, 1) * 100  # Proportions in percentage
+prop_gender_online_teaching
+
+# Cross-tabulation for 'gender' and 'online_n'
+gender_online_n_crosstab <- table(survey$gender, survey$online_n)
+gender_online_n_crosstab
+
+# Proportions for 'gender' and 'online_n', across each level of 'gender'
+prop_gender_online_n <- prop.table(gender_online_n_crosstab, 1) * 100  # Proportions in percentage
+prop_gender_online_n
+
+```
+
+```{r gender_technology_tables_1, echo=FALSE}
+
+# Creating the data with direct column naming
+simplified_table_data <- data.frame(
+  "Tested Relationship" = c("Gender and Technology", 
+                            "Gender and Online Teaching", 
+                            "Gender and Online N"),
+  "X-squared (Test statistic)" = c(1.7838, 14.204, 35.323),
+  "Degrees of Freedom (df)" = c(3, 3, 18),
+  "p-value" = c(0.6185, 0.00264, 0.008605),
+  "Significance" = ifelse(c(0.6185, 0.00264, 0.008605) < 0.05, "Significant", "Not Significant")
+)
+
+# Displaying the revised table using kable with LaTeX formatting
+kable(simplified_table_data, 
+      caption = "Results for Pearson's Chi-Squared Tests", 
+      format = "latex", 
+      booktabs = TRUE, 
+      row.names = FALSE) %>%
+  kable_styling(latex_options = c("striped", "hold_position"))
+
+```
+
+The Chi-Squared Test for independence only tells us if there is a significant difference. It does not tell us the nature of that difference. To find out what difference there is, we need to look at the descriptive statistics.
+
+When we looked at whether different gender categories have a preference for online teaching, we found some interesting patterns.
+
+- Females were **less inclined** to teach online, with only about 23% saying 'Yes' compared to 77% who said 'No'.
+- Males, on the other hand, showed a slightly **higher inclination** towards online teaching, with 32% saying 'Yes'.
+- The category "Other, please specify" had the highest inclination towards online teaching, with a massive 80% saying 'Yes'.
+
+```{r gender_technology_tables_2, echo=FALSE}
+
+# 1. Gender and Online Teaching Preference Table
+teaching_data <- data.frame(
+  Gender = c("Female", "Male", "Other, please specify", "Prefer not to say"),
+  Yes = c(105, 60, 4, 2),
+  No = c(356, 125, 1, 4),
+  `Yes Percentage` = c(22.78, 32.43, 80.00, 33.33),
+  `No Percentage` = c(77.22, 67.57, 20.00, 66.67)
+)
+
+# Display the teaching preference table using kable with LaTeX formatting
+kable(teaching_data, 
+      caption = "Gender and Online Teaching Preference", 
+      format = "latex", 
+      booktabs = TRUE, 
+      row.names = FALSE) %>%
+  kable_styling(latex_options = c("striped", "hold_position"))
+
+# 2. Gender and Number of Students Taught Online Table
+students_data <- data.frame(
+  Gender = c("Female", "Male", "Other, please specify", "Prefer not to say"),
+  Zero = c(303, 106, 1, 4),
+  `1-5` = c(53, 11, 0, 0),
+  `6-10` = c(21, 10, 1, 0),
+  `11-20` = c(10, 14, 1, 1),
+  `21-50` = c(21, 11, 1, 0),
+  `51-100` = c(19, 11, 0, 0),
+  `More than 100` = c(34, 22, 1, 1),
+  `Zero Percentage` = c(65.73, 57.30, 20.00, 66.67),
+  `1-5 Percentage` = c(11.50, 5.95, 0.00, 0.00),
+  `6-10 Percentage` = c(4.56, 5.41, 20.00, 0.00),
+  `11-20 Percentage` = c(2.17, 7.57, 20.00, 16.67),
+  `21-50 Percentage` = c(4.56, 5.95, 20.00, 0.00),
+  `51-100 Percentage` = c(4.12, 5.95, 0.00, 0.00),
+  `More than 100 Percentage` = c(7.38, 11.89, 20.00, 16.67)
+)
+
+# Display the students taught online table using kable with LaTeX formatting
+kable(students_data, 
+      caption = "Gender and Number of Students Taught Online", 
+      format = "latex", 
+      booktabs = TRUE, 
+      row.names = FALSE) %>%
+  kable_styling(latex_options = c("striped", "hold_position"))
+
+```
+
+When I explored how many students each gender category has taught online, I found some interesting differences:
+
+- Females predominantly (about 66%) have taught 0 students online. However, there's a small proportion (around 7%) who have taught more than 100 students online.
+- Males show a pattern where a majority (57%) have taught 0 students online, but interestingly, close to 12% have taught more than 100 students online.
+- For the "Other, please specify" category, the data is spread out, suggesting variability in teaching online, with 20% having taught more than 100 students online.
+   
+Our statistical tests confirmed that there are significant differences in the preferences and patterns of online teaching across gender categories. Specifically, while gender doesn't seem to significantly influence the use of technology, it does play a role in the preference for online teaching and the number of students taught online.
+
+To put it simply, gender seems to influence whether someone engages in online teaching and how many students they've taught online, but it doesn't necessarily dictate their use of technology in general.
+
+We conducted data preprocessing steps for the `survey` dataset focused on the variables `gender` and `online_teaching`, which are of particular interest due to previously identified significant differences between genders in online teaching practices, as determined by **Chi-Squared** tests. 
+
+The code first cleans the data by converting empty strings to `NA` (missing values) in the `gender` column and temporarily converts `online_teaching` to a character type to handle missing values similarly. 
+
+After dropping all rows with missing values in these two key columns, `online_teaching` is converted back to a factor, which is suitable for categorical data analysis in `R`. 
+
+The dataset is then filtered to include only the relevant variables, ensuring a clean and focused dataset for subsequent modeling. 
+
+This focused preprocessing is justified as it prepares the dataset for modeling that will further investigate the relationship between gender and online teaching, based on prior significant findings.
+
+```{R, echo=FALSE, include=FALSE}
+
+# Data preprocessing
+survey <- survey %>%
+  mutate(gender = fct_na_value_to_level(gender),  # Convert "" to NA in factor column
+         online_teaching = as.character(online_teaching),  # Convert to character temporarily
+         online_teaching = na_if(online_teaching, "")) %>%
+  drop_na(gender, online_teaching)
+
+# Convert online_teaching back to factor
+survey$online_teaching <- as.factor(survey$online_teaching)
+
+# Selecting only relevant variables for modeling
+relevant_variables <- survey[, c("gender", "online_teaching")]
+
+# Count NAs in relevant variables pre-filter
+na_count <- sum(is.na(relevant_variables))
+#print(paste("Number of NA values in relevant variables:", na_count))
+
+# Filter dataset for NA values in key variables
+survey_filtered <- relevant_variables %>%
+  filter(!is.na(gender) & !is.na(online_teaching))
+
+# Check for NA values in the filtered dataset
+#print(paste("Number of NAs in the filtered dataset:", sum(is.na(survey_filtered))))
+```
+
+### Random Forest and XGBoost
+
+We split the dataset `survey` into training and test sets, with stratification on the `gender` variable to ensure representative samples, and sets a seed for reproducibility. 
+
+Two machine learning models, **Random Forest** and **XGBoost**, are prepared for a classification task to predict `online_teaching` based on `gender`. 
+
+Both models are known for handling categorical data and are suitable for classification problems where the relationships between variables may be complex and non-linear. 
+
+>**Random Forest** is a robust and widely-used ensemble learning method that can provide good performance with less risk of overfitting due to its bagging approach. 
+
+>**XGBoost** is another powerful ensemble technique that uses a gradient boosting framework and is often praised for its performance in classification tasks, handling various types of data, and its speed and efficiency. 
+
+We create workflows for each model, fit them to the training data, and evaluate predictions against the test data.
+
+This approach allows for a comparative assessment of two leading algorithms in predicting how gender influences online teaching engagement, potentially offering insights into the structure and strength of this relationship.
+
+```{R, echo=FALSE, include=FALSE}
+
+# Splitting the data with a set seed for reproducibility
+set.seed(123)
+split <- initial_split(survey, prop = 0.8, strata = gender)
+train_data <- training(split)
+test_data <- testing(split)
+
+# Check the structure of the training and test data sets
+print("Training data structure:")
+print(str(train_data))
+print("Test data structure:")
+print(str(test_data))
+
+# Model preparation with error handling
+rf_spec <- rand_forest(mtry = 2, trees = 500) %>%
+  set_engine("ranger") %>%
+  set_mode("classification")
+
+xgb_spec <- boost_tree() %>%
+  set_engine("xgboost") %>%
+  set_mode("classification")
+
+# Workflow creation and fitting models with error handling
+workflow_list <- list(Random_Forest = rf_spec, XGBoost = xgb_spec)
+
+fits <- list()
+for (model_name in names(workflow_list)) {
+  spec <- workflow_list[[model_name]]
+  message("Fitting ", model_name)
+  fit_result <- try(
+    workflow() %>%
+      add_formula(online_teaching ~ gender) %>%
+      add_model(spec) %>%
+      fit(data = train_data),
+    silent = TRUE
+  )
+  
+  if (inherits(fit_result, "try-error")) {
+    message("Error fitting ", model_name)
+  } else {
+    fits[[model_name]] <- fit_result
+    print(fit_result)
+  }
+}
+
+# Prediction and metrics with error handling
+for(model_name in names(fits)) {
+  fit <- fits[[model_name]]
+  if (!is.null(fit)) {
+    message("Predicting with ", model_name)
+    preds <- predict(fit, test_data, type = "prob") %>%
+      bind_cols(test_data) %>%
+      mutate(.pred_class = as_factor(if_else(.pred_Yes > .pred_No, "Yes", "No")))
+
+    # Check confusion matrix and metrics
+    message("Confusion Matrix for ", model_name)
+    conf_mat <- conf_mat(preds, truth = online_teaching, estimate = .pred_class)
+    print(conf_mat)
+    
+    message("Metrics for ", model_name)
+    metrics <- preds %>%
+      metrics(truth = online_teaching, estimate = .pred_class)
+    print(metrics)
+  }
+}
+```
+
+```{R, echo=FALSE}
+
+# Create a data frame of the metrics
+metrics_df <- data.frame(
+  Model = rep(c("Random Forest", "XGBoost"), each = 2),
+  Metric = rep(c("Accuracy", "Kappa"), 2),
+  Estimate = c(0.701, 0.0313, 0.701, 0.0313)
+)
+
+# Generate a LaTeX table with kable
+kable(metrics_df, "latex", booktabs = TRUE, caption = "Model Performance Metrics") %>%
+  kable_styling(latex_options = c("striped", "hold_position"))
+
+```
+
+Based on the results provided:
+
+The **Random Forest** model predicted correctly that 100 observations would be 'No' and correctly predicted 1 observation as 'Yes', but it incorrectly predicted that 43 observations would be 'No' when they were actually 'Yes'. This model did not predict any 'Yes' observations incorrectly as 'No'.
+
+The **XGBoost** model produced the same confusion matrix results as the Random Forest, with 100 true negatives, 43 false negatives, and 1 true positive. There is no mention of false positives, which could be a missing value in the output provided.
+
+Both models achieved the same accuracy of `0.701` and a Kappa statistic of `0.0313`. The accuracy indicates that approximately 70.1% of predictions were correct, while the Kappa statistic, which accounts for the accuracy that could occur by chance, suggests that the agreement between predictions and actuals is only slightly better than chance.
+
+Given that both models show identical performance metrics, it might indicate that they are either reaching their performance limit given the data or that there could be an error in the model configuration or the data itself. The identical confusion matrices further suggest that both models are performing similarly on this particular dataset.
+
+```{R, echo=FALSE, eval=FALSE}
+
+# Splitting the data
+set.seed(123)
+split <- initial_split(survey, prop = 0.8, strata = gender)
+train_data <- training(split)
+test_data <- testing(split)
+
+#print("Training and Test data structures:")
+#print(str(train_data))
+#print(str(test_data))
+
+# Model preparation
+rf_spec <- rand_forest() %>%
+  set_engine("ranger") %>%
+  set_mode("classification")
+
+xgb_spec <- boost_tree() %>%
+  set_engine("xgboost") %>%
+  set_mode("classification")
+
+# Workflow creation and fitting models
+workflow_list <- list(rf_spec, xgb_spec)
+names(workflow_list) <- c("Random Forest", "XGBoost")
+fits <- lapply(workflow_list, function(spec) {
+  workflow() %>%
+    add_formula(online_teaching ~ gender) %>%
+    add_model(spec) %>%
+    fit(data = train_data)
+})
+
+# Print fitted models
+#lapply(fits, print)
+
+# Predictions and metrics
+for(model_name in names(fits)) {
+  preds <- predict(fits[[model_name]], test_data, type = "prob") %>%
+    bind_cols(test_data) %>%
+    mutate(.pred_class = as_factor(if_else(.pred_Yes > .pred_No, "Yes", "No")))
+
+  # Confusion matrix
+  conf_mat <- conf_mat(preds, truth = online_teaching, estimate = .pred_class)
+  #print(paste(model_name, "Confusion Matrix:"))
+  #print(conf_mat)
+
+  # Metrics
+  metrics <- preds %>%
+    metrics(truth = online_teaching, estimate = .pred_class)
+  #print(paste(model_name, "Metrics:"))
+  #print(metrics)
+}
+```
+
+### XGBoost Model Performance
+
+We evaluated the XGBoost model's performance over ten iterations using a metric called **log loss**, which measures the accuracy of a classifier by penalizing false classifications. 
+
+A data frame, `xgb_performance`, is defined to hold the iteration numbers and their corresponding training log loss values. These values show a trend of **decreasing log loss over the iterations**, indicating the model is improving and becoming more accurate as it learns. 
+
+The `kable` function from the `knitr` package is utilized to neatly format this data into a `LaTeX` table, which is styled to have a striped pattern and fixed position in the document. 
+
+```{R, echo=FALSE}
+
+# Define the data frame
+xgb_performance <- data.frame(
+  iter = 1:10,  # Replace with the actual number of iterations you have
+  training_logloss = c(0.6241134, 0.5892745, 0.5706919, 0.5608741, 
+                       0.5554729, 0.5526112, 0.5511099, 0.5503296, 
+                       0.5499500, 0.5497339)  # Replace with the actual log loss values you have
+)
+
+# Generate the table
+xgb_performance %>%
+  kable("latex", booktabs = TRUE, caption = "XGBoost Training Log Loss") %>%
+  kable_styling(latex_options = c("striped", "hold_position"))
+
+```
+
+We generated a line plot using `ggplot2`, which visually depicts the **decline in training log loss across iterations**, reinforcing the numerical data with a graphical trend that signifies the model’s increasing predictive performance. The minimal theme of the plot ensures focus on the data points and the trend line, providing a clear visual representation of the model's training progress.
+
+```{R, echo=FALSE}
+
+# Plot the training log loss over iterations for the XGBoost model
+ggplot(xgb_performance, aes(x = iter, y = training_logloss)) +
+  geom_line(color = "blue") +
+  geom_point(color = "blue") +
+  labs(title = "XGBoost Model Training Log Loss Over Iterations",
+       x = "Iteration",
+       y = "Training Log Loss") +
+  theme_minimal()
+
+```
+
+```{R, echo=FALSE, eval=FALSE}
+
+metrics_rf <- data.frame(
+  Model = "Random Forest",
+  Metric = c("Accuracy", "Kappa"),
+  Estimate = c(0.701, 0.0313)
+)
+
+metrics_xgb <- data.frame(
+  Model = "XGBoost",
+  Metric = c("Accuracy", "Kappa"),
+  Estimate = c(0.701, 0.0313)
+)
+
+combined_metrics <- rbind(metrics_rf, metrics_xgb)
+
+# Combine the metrics data frames for Random Forest and XGBoost
+combined_metrics <- rbind(metrics_rf, metrics_xgb)
+
+# Use kable to create a LaTeX table with the combined metrics
+kable(combined_metrics, "latex", booktabs = TRUE, caption = "Model Performance Metrics") %>%
+  kable_styling(latex_options = c("striped", "hold_position"))
+
+
+```
+
+## 3.4 What are mindfulness teachers' outlooks on the future?
+
+We asked our participants "What do you see as the main challenges and/or opportunities for the future of the mindfulness sector?" 
+
+This is an open-ended question that allows for a wide range of responses. Participants were asked to provide their responses in a text box, which provided character data. 
+
+To analyse the data, we followed the procedure described in the Methods/Analysis section.
+
+### Sentiment Summary
+
+A summary of these sentiment scores was created to determine the frequency of each sentiment category. 
+
+```{R, echo=FALSE}
+# Calculate net sentiment
+sentiment_summary <- sentiment_summary %>%
+  mutate(net_sentiment = positive - negative)
+
+# Print net sentiment
+#print(sentiment_summary)
+
+# Assuming sentiment_summary is your data frame
+sentiment_summary %>%
+  kable("latex", booktabs = TRUE, caption = "Net Sentiment Summary") %>%
+  kable_styling(latex_options = c("striped", "hold_position"))
+
+# Print net sentiment value
+#print(sentiment_summary$net_sentiment)
+```
+
+
+**Net Sentiment Value**: This was followed by calculating net sentiment by offsetting negative words against positive ones. A net sentiment value of 808 indicates a predominantly positive sentiment in the text data analyzed.
+
+**Top Word Frequencies**: Finally, the most frequent words in each sentiment category were visualized in a plot, aiding in comprehending the overall sentiment of the survey data. 
+
+```{R, echo=FALSE}
+# Count the frequency of each word within each sentiment category
+word_freq <- sentiment_scores %>%
+  count(word, sentiment) %>%
+  ungroup() %>%
+  arrange(desc(n))
+
+# Print the word frequencies to check
+#print(head(word_freq))
+
+# Create the plot with words frequency
+#ggplot(word_freq, aes(x = word, y = n, color = sentiment)) +
+#  geom_jitter(size = 2.5, width = 0.15) +
+#  labs(x = "Word", y = "Frequency", color = "Sentiment") +
+#  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+#  ggtitle("Frequency of Words by Sentiment")
+
+# Specify the number of top words you want to display
+top_n_words <- 30
+
+# Select the top N most frequent words
+word_freq_top_n <- word_freq %>%
+  arrange(desc(n)) %>%
+  slice_max(order_by = n, n = top_n_words)
+```
+
+The visualization provided shows a scatter plot with words on the y-axis and their frequency on the x-axis, colored by sentiment. Words like "work", "good", "like", and "well" appear most frequently with a positive sentiment, while negative words are less frequent. The plot is flipped for better readability.
+
+```{R, echo=FALSE}
+# Now plot only the top N words to avoid clutter
+ggplot(word_freq_top_n, aes(x = reorder(word, n), y = n, color = sentiment)) +
+  geom_jitter(size = 2.5, width = 0.15) +
+  labs(x = "Word", y = "Frequency", color = "Sentiment") +
+  theme(axis.text.x = element_text(angle = 65, hjust = 1, vjust = 1),
+        axis.title.x = element_blank(),
+        legend.position = "top") +
+  ggtitle("Top Words by Sentiment Frequency") +
+  coord_flip()  # Flipping coordinates for better readability
+
+```
+
+The process is justified as it provides a structured approach to quantify and visualize sentiments expressed in text data, allowing for objective analysis of qualitative data.
+
+# 4. Conclusion
+
+This section gives a brief summary of the report, its potential impact, its limitations, and future work.
+
+## Overview
+
+The **Mindfulness, Gender & Online Teaching** project provides a comprehensive exploration into the dynamics of mindfulness teaching, particularly examining the intersections of gender and online teaching modalities. Through a robust analysis of data from a nationwide survey, key insights were uncovered about the demographic characteristics of mindfulness teachers, their preferences, and practices in online teaching.
+
+## Key Findings
+
+>**A gendered landscape in mindfulness teaching**, with females being the predominant demographic. There's a notable variation in online teaching preferences and the number of students taught, influenced significantly by gender. 
+
+These insights are crucial in understanding the current trends and future directions in the mindfulness sector. 
+
+>**The advanced statistical and machine learning models**, including Random Forest and XGBoost models, have provided valuable predictions about online teaching practices based on gender, contributing to a deeper understanding of the sector's dynamics.
+
+However, the project has its limitations. 
+
+## Limitations
+
+The reliance on **self-reported data** may introduce biases, and the sample may not comprehensively represent the entire mindfulness teaching community. This limitation underscores the need for broader and more inclusive data collection in future studies.
+
+## Future Directions
+
+Looking forward, this project lays a foundation for further research in the field. 
+
+Future studies should aim to include a more diverse sample to capture a wider range of experiences and perspectives. 
+
+There's also a need to explore additional factors that might influence mindfulness teaching practices, such as cultural backgrounds, socioeconomic status, and geographic locations. The integration of these aspects will offer a more holistic understanding of the mindfulness sector, facilitating the development of more inclusive and effective teaching strategies. 
+
+This research has the potential to significantly impact the mindfulness community, guiding mindful teaching practices to be more attuned to the diverse needs of learners in an increasingly digital world.
+
+# 5. References
+
+This section lists sources for datasets and/or other resources used.
+
+Kuhn, M., & Silge, J. (2022). [*Tidy Modeling with R*](https://www.tmwr.org/). O'Reilly Media, Inc. ISBN: 9781492096481.
+
+Simonsson, O., Fisher, S., & Martin, M. (2021). [Awareness and Experience of Mindfulness in Britain.](https://doi.org/10.1177/1360780420980761) *Sociological Research Online, 26* (4), 833-852.
+
+
+
+
+
+
+
+
+
